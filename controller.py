@@ -18,8 +18,6 @@ from zope.interface import implements
 from twisted.cred import checkers, portal
 from twisted.web.guard import HTTPAuthSessionWrapper, BasicCredentialFactory
 
-
-
 class HttpPasswordRealm(object):
     implements(portal.IRealm)
 
@@ -49,7 +47,7 @@ class Door(object):
         self.open_time = time.time()
         gpio.setup(self.relay_pin, gpio.OUT)
         gpio.setup(self.state_pin, gpio.IN, pull_up_down=gpio.PUD_UP)
-        gpio.output(self.relay_pin, True)
+        gpio.output(self.relay_pin, False)
 
     def get_state(self):
         if gpio.input(self.state_pin) == self.state_pin_closed_value:
@@ -79,9 +77,9 @@ class Door(object):
             self.last_action = None
             self.last_action_time = None
 
-        gpio.output(self.relay_pin, False)
-        time.sleep(0.2)
         gpio.output(self.relay_pin, True)
+        time.sleep(0.25)
+        gpio.output(self.relay_pin, False)
 
 class Controller(object):
     def __init__(self, config):
@@ -183,6 +181,7 @@ class Controller(object):
         response = conn.getresponse().read()
         print(response)
         door.pb_iden = json.loads(response)['iden']
+
     def send_pushover(self, door, title, message):
         syslog.syslog("Sending Pushover message")
         config = self.config['alerts']['pushover']
@@ -277,7 +276,6 @@ class ConfigHandler(Resource):
 
         return json.dumps([(d.id, d.name, d.last_state, d.last_state_time)
                             for d in self.controller.doors])
-
 
 class UptimeHandler(Resource):
     isLeaf = True
